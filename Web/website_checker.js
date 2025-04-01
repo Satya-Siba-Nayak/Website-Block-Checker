@@ -131,7 +131,7 @@ function initializeResults() {
             
             const statusIcon = document.createElement('span');
             statusIcon.className = 'status-icon';
-            statusIcon.textContent = '⏳';
+            statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             
             const websiteUrl = document.createElement('span');
             websiteUrl.textContent = url;
@@ -210,10 +210,10 @@ function updateWebsiteStatus(url, isAccessible, error) {
     
     if (isAccessible) {
         websiteItem.classList.add('accessible');
-        statusIcon.textContent = '✅';
+        statusIcon.innerHTML = '<i class="fas fa-check"></i>';
     } else {
         websiteItem.classList.add('inaccessible');
-        statusIcon.textContent = '❌';
+        statusIcon.innerHTML = '<i class="fas fa-times"></i>';
         
         // Add error message if available
         if (error) {
@@ -247,11 +247,13 @@ function showSummary(accessibleCount, inaccessibleCount) {
     summaryDiv.style.display = 'block';
     
     if (inaccessibleCount === 0) {
-        summaryDiv.textContent = 'All websites are accessible! 🎉';
-        summaryDiv.style.backgroundColor = '#e6ffe6';
+        summaryDiv.innerHTML = '<i class="fas fa-check-circle" style="color: #4cc9f0; margin-right: 10px;"></i> All websites are accessible! <i class="fas fa-thumbs-up" style="margin-left: 5px;"></i>';
+        summaryDiv.style.backgroundColor = 'var(--success-bg)';
+        summaryDiv.style.color = 'var(--success-color)';
     } else {
-        summaryDiv.textContent = `Results: ${accessibleCount} accessible, ${inaccessibleCount} inaccessible websites`;
+        summaryDiv.innerHTML = `<div><i class="fas fa-info-circle" style="margin-right: 10px;"></i> Results: <span style="color: var(--success-color); font-weight: bold;">${accessibleCount}</span> accessible, <span style="color: var(--warning-color); font-weight: bold;">${inaccessibleCount}</span> inaccessible websites</div>`;
         summaryDiv.style.backgroundColor = '#fff3cd';
+        summaryDiv.style.color = '#856404';
     }
 }
 

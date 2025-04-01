@@ -4,128 +4,329 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Website Block Checker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a0ca3;
+            --success-color: #4cc9f0;
+            --success-bg: #e0f7fa;
+            --warning-color: #f72585;
+            --warning-bg: #fce4ec;
+            --pending-color: #7209b7;
+            --pending-bg: #f3e5f5;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --bg-light: #f8f9fa;
+            --bg-card: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
-            line-height: 1.6;
         }
-        h1 {
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 2rem 0;
             text-align: center;
-            color: #333;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
         }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+
         .description {
-            background-color: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            background-color: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            text-align: center;
         }
+
+        .description p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+
+        #start-btn {
+            display: block;
+            margin: 1.5rem auto;
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        #start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+
+        #start-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #progress-container {
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        progress {
+            width: 100%;
+            height: 12px;
+            border-radius: 10px;
+            overflow: hidden;
+            -webkit-appearance: none;
+        }
+
+        progress::-webkit-progress-bar {
+            background-color: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        progress::-webkit-progress-value {
+            background: linear-gradient(to right, var(--primary-light), var(--primary-color));
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        #status-text {
+            margin-top: 1rem;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
         #results {
-            margin-top: 20px;
+            margin-top: 2rem;
         }
+
+        .category-header {
+            margin: 1.5rem 0 1rem;
+            font-weight: 600;
+            font-size: 1.2rem;
+            background: linear-gradient(to right, var(--primary-light), var(--primary-color));
+            color: white;
+            padding: 0.8rem 1.2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
         .website-item {
             display: flex;
             align-items: center;
-            margin-bottom: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+            margin-bottom: 0.8rem;
+            padding: 1rem 1.2rem;
+            border-radius: var(--border-radius);
+            background-color: var(--bg-card);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: var(--transition);
         }
+
+        .website-item:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
         .status-icon {
-            margin-right: 10px;
-            font-size: 20px;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background-color: #f0f0f0;
         }
+
         .accessible {
-            background-color: #e6ffe6;
+            background-color: var(--success-bg);
+            border-left: 4px solid var(--success-color);
         }
-        .inaccessible {
-            background-color: #ffe6e6;
-        }
-        .pending {
-            background-color: #e6e6ff;
-        }
-        .category-header {
-            margin-top: 20px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            background-color: #eee;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-        #progress-container {
-            margin: 20px 0;
-        }
-        progress {
-            width: 100%;
-            height: 20px;
-        }
-        #status-text {
-            text-align: center;
-            margin-top: 5px;
-        }
-        #start-btn {
-            display: block;
-            margin: 20px auto;
-            padding: 10px 20px;
-            background-color: #4CAF50;
+
+        .accessible .status-icon {
+            background-color: var(--success-color);
             color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
         }
-        #start-btn:hover {
-            background-color: #45a049;
+
+        .inaccessible {
+            background-color: var(--warning-bg);
+            border-left: 4px solid var(--warning-color);
         }
-        #start-btn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
+
+        .inaccessible .status-icon {
+            background-color: var(--warning-color);
+            color: white;
         }
+
+        .pending {
+            background-color: var(--pending-bg);
+            border-left: 4px solid var(--pending-color);
+        }
+
+        .pending .status-icon {
+            background-color: var(--pending-color);
+            color: white;
+        }
+
         .error-message {
-            color: red;
-            font-size: 0.9em;
-            margin-left: 10px;
+            color: var(--warning-color);
+            font-size: 0.85rem;
+            margin-left: 1rem;
+            font-style: italic;
         }
+
         #summary {
-            margin-top: 20px;
+            margin: 2rem 0;
             text-align: center;
-            font-weight: bold;
-            padding: 10px;
-            border-radius: 5px;
+            font-weight: 600;
+            padding: 1rem;
+            border-radius: var(--border-radius);
             display: none;
+            animation: fadeIn 0.5s ease;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .cors-note {
             background-color: #fff3cd;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 20px;
-            font-size: 0.9em;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            border-left: 4px solid #ffc107;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1.5rem 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            .card {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Website Block Checker</h1>
-    
-    <div class="description">
-        <p>This tool checks if websites are accessible from your current network. It helps identify which sites might be blocked by your ISP, university, or organization's network.</p>
+    <header>
+        <div class="logo">
+            <i class="fas fa-shield-alt"></i>
+        </div>
+        <h1>Website Block Checker</h1>
+        <p class="subtitle">Check if websites are accessible from your current network</p>
+    </header>
+
+    <div class="container">
+        <div class="description card">
+            <p>This tool checks if websites are accessible from your current network. It helps identify which sites might be blocked by your ISP, university, or organization's network.</p>
+        </div>
+        
+        <button id="start-btn">Start Checking <i class="fas fa-play-circle"></i></button>
+        
+        <div id="progress-container" style="display: none;">
+            <progress id="progress-bar" value="0" max="100"></progress>
+            <div id="status-text">Preparing to check websites...</div>
+        </div>
+        
+        <div id="summary" class="card"></div>
+        
+        <div id="results"></div>
+        
+        <div class="cors-note card">
+            <p><strong>Note:</strong> Due to browser security restrictions (CORS), some websites may show as inaccessible even if they're not blocked. This is because browsers prevent direct requests to domains that don't explicitly allow it.</p>
+        </div>
     </div>
-    
-    <button id="start-btn">Start Checking</button>
-    
-    <div id="progress-container" style="display: none;">
-        <progress id="progress-bar" value="0" max="100"></progress>
-        <div id="status-text">Preparing to check websites...</div>
-    </div>
-    
-    <div id="summary"></div>
-    
-    <div id="results"></div>
-    
-    <div class="cors-note">
-        <p><strong>Note:</strong> Due to browser security restrictions (CORS), some websites may show as inaccessible even if they're not blocked. This is because browsers prevent direct requests to domains that don't explicitly allow it.</p>
-    </div>
+
+    <footer>
+        <p>Website Block Checker &copy; 2023 | A tool to check website accessibility</p>
+    </footer>
 
     <script src="website_checker.js"></script>
 </body>
