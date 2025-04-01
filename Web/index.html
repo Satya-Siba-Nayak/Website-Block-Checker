@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Block Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .description {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #results {
+            margin-top: 20px;
+        }
+        .website-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .status-icon {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        .accessible {
+            background-color: #e6ffe6;
+        }
+        .inaccessible {
+            background-color: #ffe6e6;
+        }
+        .pending {
+            background-color: #e6e6ff;
+        }
+        .category-header {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            background-color: #eee;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #progress-container {
+            margin: 20px 0;
+        }
+        progress {
+            width: 100%;
+            height: 20px;
+        }
+        #status-text {
+            text-align: center;
+            margin-top: 5px;
+        }
+        #start-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #start-btn:hover {
+            background-color: #45a049;
+        }
+        #start-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        #summary {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .cors-note {
+            background-color: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Website Block Checker</h1>
+    
+    <div class="description">
+        <p>This tool checks if websites are accessible from your current network. It helps identify which sites might be blocked by your ISP, university, or organization's network.</p>
+    </div>
+    
+    <button id="start-btn">Start Checking</button>
+    
+    <div id="progress-container" style="display: none;">
+        <progress id="progress-bar" value="0" max="100"></progress>
+        <div id="status-text">Preparing to check websites...</div>
+    </div>
+    
+    <div id="summary"></div>
+    
+    <div id="results"></div>
+    
+    <div class="cors-note">
+        <p><strong>Note:</strong> Due to browser security restrictions (CORS), some websites may show as inaccessible even if they're not blocked. This is because browsers prevent direct requests to domains that don't explicitly allow it.</p>
+    </div>
+
+    <script src="website_checker.js"></script>
+</body>
+</html>
