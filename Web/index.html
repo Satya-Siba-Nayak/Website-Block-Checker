@@ -8,24 +8,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #1D9BF0;
-            --primary-light: #1A91DA;
-            --primary-dark: #0C7ABF;
-            --success-color: #00BA7C;
-            --success-bg: rgba(0, 186, 124, 0.1);
-            --warning-color: #F4212E;
-            --warning-bg: rgba(244, 33, 46, 0.1);
-            --pending-color: #536471;
-            --pending-bg: rgba(83, 100, 113, 0.1);
-            --text-primary: #E7E9EA;
-            --text-secondary: #71767B;
+            --primary-color: #333333;
+            --primary-light: #444444;
+            --primary-dark: #222222;
+            --success-color: #FFFFFF;
+            --success-bg: rgba(255, 255, 255, 0.1);
+            --warning-color: #777777;
+            --warning-bg: rgba(119, 119, 119, 0.1);
+            --pending-color: #999999;
+            --pending-bg: rgba(153, 153, 153, 0.1);
+            --text-primary: #FFFFFF;
+            --text-secondary: #AAAAAA;
             --bg-dark: #000000;
-            --bg-darker: #15202B;
-            --bg-card: #15202B;
-            --bg-hover: #1E2732;
-            --border-color: #38444D;
+            --bg-darker: #111111;
+            --bg-card: #111111;
+            --bg-hover: #222222;
+            --border-color: #333333;
             --shadow: none;
-            --border-radius: 12px;
+            --border-radius: 8px;
             --transition: all 0.2s ease;
         }
 
@@ -133,10 +133,10 @@
             display: block;
             margin: 1.5rem auto;
             padding: 0.8rem 2rem;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 9999px;
+            background-color: #FFFFFF;
+            color: #000000;
+            border: 1px solid #333333;
+            border-radius: 4px;
             cursor: pointer;
             font-size: 0.95rem;
             font-weight: 700;
@@ -147,18 +147,20 @@
         }
 
         #start-btn:hover {
-            background-color: var(--primary-dark);
+            background-color: #EEEEEE;
             transform: none;
             box-shadow: none;
         }
 
         #start-btn:active {
             transform: translateY(1px);
+            background-color: #DDDDDD;
             box-shadow: none;
         }
 
         #start-btn:disabled {
-            background-color: rgba(29, 155, 240, 0.5);
+            background-color: #333333;
+            color: #777777;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
@@ -184,13 +186,13 @@
         }
 
         progress::-webkit-progress-bar {
-            background-color: rgba(29, 155, 240, 0.2);
-            border-radius: 9999px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
         }
 
         progress::-webkit-progress-value {
-            background-color: var(--primary-color);
-            border-radius: 9999px;
+            background-color: #FFFFFF;
+            border-radius: 4px;
             transition: width 0.3s ease;
             background-image: none;
             background-size: 1rem 1rem;
@@ -413,11 +415,15 @@
         <div class="cors-note card">
             <p><strong>Note:</strong> Due to browser security restrictions (CORS), some websites may show as inaccessible even if they're not blocked. This is because browsers prevent direct requests to domains that don't explicitly allow it.</p>
         </div>
-    </div>
 
-    <footer>
-        <p>Website Block Checker &copy; 2023 | A tool to check website accessibility</p>
-    </footer>
+        <div class="contribute-container" style="text-align: center; margin-top: 3rem;">
+            <a href="https://github.com/Satya-Siba-Nayak/Website-Block-Checker" target="_blank" rel="noopener noreferrer">
+                <button id="contribute-btn" style="display: inline-flex; align-items: center; gap: 10px; padding: 0.8rem 2rem; background-color: #333333; color: #FFFFFF; border: 1px solid #444444; border-radius: 4px; cursor: pointer; font-size: 0.95rem; font-weight: 700; transition: all 0.2s ease;">
+                    <i class="fab fa-github" style="font-size: 1.2rem;"></i> Contribute on GitHub
+                </button>
+            </a>
+        </div>
+    </div>
 
     <script src="website_checker.js"></script>
 </body>

@@ -255,13 +255,13 @@ function showSummary(accessibleCount, inaccessibleCount) {
     summaryDiv.style.display = 'block';
     
     if (inaccessibleCount === 0) {
-        summaryDiv.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success-color); margin-right: 10px;"></i> All websites are accessible! <i class="fas fa-thumbs-up" style="margin-left: 5px;"></i>';
-        summaryDiv.style.backgroundColor = 'var(--success-bg)';
-        summaryDiv.style.color = 'var(--success-color)';
+        summaryDiv.innerHTML = '<i class="fas fa-check-circle" style="color: #FFFFFF; margin-right: 10px;"></i> All websites are accessible! <i class="fas fa-thumbs-up" style="margin-left: 5px;"></i>';
+        summaryDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+        summaryDiv.style.color = '#FFFFFF';
     } else {
-        summaryDiv.innerHTML = `<div><i class="fas fa-info-circle" style="margin-right: 10px;"></i> Results: <span style="color: var(--success-color); font-weight: bold;">${accessibleCount}</span> accessible, <span style="color: var(--warning-color); font-weight: bold;">${inaccessibleCount}</span> inaccessible websites</div>`;
-        summaryDiv.style.backgroundColor = 'var(--pending-bg)';
-        summaryDiv.style.color = 'var(--pending-color)';
+        summaryDiv.innerHTML = `<div><i class="fas fa-info-circle" style="margin-right: 10px;"></i> Results: <span style="color: #FFFFFF; font-weight: bold;">${accessibleCount}</span> accessible, <span style="color: #AAAAAA; font-weight: bold;">${inaccessibleCount}</span> inaccessible websites</div>`;
+        summaryDiv.style.backgroundColor = 'rgba(153, 153, 153, 0.1)';
+        summaryDiv.style.color = '#FFFFFF';
     }
 }
 
