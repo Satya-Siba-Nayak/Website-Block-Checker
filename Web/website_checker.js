@@ -112,6 +112,14 @@ const statusText = document.getElementById('status-text');
 const resultsDiv = document.getElementById('results');
 const summaryDiv = document.getElementById('summary');
 
+// Add animation class to elements when they appear
+function animateElement(element, className = 'animate-in') {
+    if (element) {
+        element.classList.add(className);
+        setTimeout(() => element.classList.remove(className), 500);
+    }
+}
+
 // Initialize the results container with website categories
 function initializeResults() {
     resultsDiv.innerHTML = '';
@@ -247,13 +255,13 @@ function showSummary(accessibleCount, inaccessibleCount) {
     summaryDiv.style.display = 'block';
     
     if (inaccessibleCount === 0) {
-        summaryDiv.innerHTML = '<i class="fas fa-check-circle" style="color: #4cc9f0; margin-right: 10px;"></i> All websites are accessible! <i class="fas fa-thumbs-up" style="margin-left: 5px;"></i>';
+        summaryDiv.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success-color); margin-right: 10px;"></i> All websites are accessible! <i class="fas fa-thumbs-up" style="margin-left: 5px;"></i>';
         summaryDiv.style.backgroundColor = 'var(--success-bg)';
         summaryDiv.style.color = 'var(--success-color)';
     } else {
         summaryDiv.innerHTML = `<div><i class="fas fa-info-circle" style="margin-right: 10px;"></i> Results: <span style="color: var(--success-color); font-weight: bold;">${accessibleCount}</span> accessible, <span style="color: var(--warning-color); font-weight: bold;">${inaccessibleCount}</span> inaccessible websites</div>`;
-        summaryDiv.style.backgroundColor = '#fff3cd';
-        summaryDiv.style.color = '#856404';
+        summaryDiv.style.backgroundColor = 'var(--pending-bg)';
+        summaryDiv.style.color = 'var(--pending-color)';
     }
 }
 
@@ -264,6 +272,7 @@ async function checkAllWebsites() {
     // Reset UI
     startBtn.disabled = true;
     progressContainer.style.display = 'block';
+    animateElement(progressContainer);
     summaryDiv.style.display = 'none';
     initializeResults();
     
