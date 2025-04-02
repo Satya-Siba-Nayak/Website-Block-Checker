@@ -152,53 +152,207 @@ function initializeResults() {
     }
 }
 
+// Cache for storing website accessibility results
+const websiteCache = new Map();
+
 /**
- * Checks if a website is accessible using fetch API
+ * Checks if a website is accessible using fetch API with multiple CORS proxies
+ * Enhanced with retry mechanism, more proxies, and caching
  * 
  * @param {string} url - The URL of the website to check
  * @returns {Promise<{isAccessible: boolean, error: string|null}>} - Result object
  */
 async function checkWebsiteAccessibility(url) {
+    // Check cache first
+    if (websiteCache.has(url)) {
+        const cachedResult = websiteCache.get(url);
+        // Only use cache if it's not too old (5 minutes)
+        if (Date.now() - cachedResult.timestamp < 5 * 60 * 1000) {
+            return cachedResult.result;
+        }
+    }
+
+    // List of CORS proxies to try in order (expanded list for more redundancy)
+    const corsProxies = [
+        { url: `https://corsproxy.io/?${encodeURIComponent(url)}`, name: 'corsproxy.io' },
+        { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, name: 'allorigins.win' },
+        { url: `https://cors-anywhere.herokuapp.com/${url}`, name: 'cors-anywhere.herokuapp.com' },
+        { url: `https://cors.bridged.cc/${url}`, name: 'cors.bridged.cc' },
+        { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`, name: 'codetabs.com' },
+        { url: `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(url)}`, name: 'htmldriven.com' },
+        { url: `https://thingproxy.freeboard.io/fetch/${url}`, name: 'thingproxy.freeboard.io' },
+        { url: `https://yacdn.org/proxy/${url}`, name: 'yacdn.org' }
+    ];
+    
+    // Try direct access first (will likely fail due to CORS but worth trying)
     try {
-        // Use a CORS proxy to avoid CORS issues
-        // Note: This is a public CORS proxy and might have rate limits
-        const corsProxyUrl = `https://cors-anywhere.herokuapp.com/${url}`;
-        
-        // Set a timeout for the fetch request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for direct access
         
-        const response = await fetch(corsProxyUrl, {
-            method: 'HEAD', // Only get headers, not the full response
-            mode: 'cors',
+        const response = await fetch(url, {
+            method: 'HEAD',
+            mode: 'no-cors', // Try with no-cors mode
+            signal: controller.signal,
+            cache: 'no-store' // Bypass cache for fresh results
+        });
+        
+        clearTimeout(timeoutId);
+        // If we get here with no-cors, we can't actually tell if the site is accessible
+        // but we can assume it might be since the request didn't fail
+        const result = { isAccessible: true, error: null, proxyUsed: 'direct' };
+        
+        // Cache the result
+        websiteCache.set(url, {
+            result,
+            timestamp: Date.now()
+        });
+        
+        return result;
+    } catch (directError) {
+        // Direct access failed (expected), continue with proxies
+    }
+    
+    // Try each proxy with retry mechanism
+    for (const proxy of corsProxies) {
+        // Try up to 3 times with exponential backoff
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                // Set a timeout for the fetch request
+                const controller = new AbortController();
+                // Increase timeout for each retry attempt
+                const timeout = 5000 + (attempt * 2000); // 5s, 7s, 9s
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                const response = await fetch(proxy.url, {
+                    method: 'HEAD', // Only get headers, not the full response
+                    mode: 'cors',
+                    signal: controller.signal,
+                    cache: 'no-store', // Bypass cache for fresh results
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 Website Block Checker'
+                    }
+                });
+                
+                clearTimeout(timeoutId);
+                
+                const result = { 
+                    isAccessible: true, 
+                    error: null,
+                    proxyUsed: proxy.name,
+                    retryAttempt: attempt > 0 ? attempt : null
+                };
+                
+                // Cache the result
+                websiteCache.set(url, {
+                    result,
+                    timestamp: Date.now()
+                });
+                
+                return result;
+            } catch (error) {
+                // If it's not the last attempt, wait before retrying
+                if (attempt < 2) {
+                    // Exponential backoff: 1s, 2s
+                    const backoffTime = Math.pow(2, attempt) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, backoffTime));
+                    continue; // Try again with this proxy
+                }
+                
+                // If this is the last proxy in the list and last attempt, return the error
+                if (proxy === corsProxies[corsProxies.length - 1]) {
+                    let result;
+                    
+                    // Check if it's a CORS error
+                    if (error.message && error.message.includes('CORS')) {
+                        result = { 
+                            isAccessible: false, 
+                            error: 'CORS policy blocked access (site may still be accessible)',
+                            failedProxies: corsProxies.map(p => p.name).join(', ')
+                        };
+                    }
+                    // Check if it's a timeout error
+                    else if (error.name === 'AbortError') {
+                        result = { 
+                            isAccessible: false, 
+                            error: 'Request timed out',
+                            failedProxies: corsProxies.map(p => p.name).join(', ')
+                        };
+                    }
+                    else {
+                        result = { 
+                            isAccessible: false, 
+                            error: 'All CORS proxies failed: ' + (error.message || 'Unknown error'),
+                            failedProxies: corsProxies.map(p => p.name).join(', ')
+                        };
+                    }
+                    
+                    // Cache the negative result (but with shorter expiry)
+                    websiteCache.set(url, {
+                        result,
+                        timestamp: Date.now()
+                    });
+                    
+                    return result;
+                }
+                
+                // If not the last proxy, break the retry loop and continue to the next proxy
+                break;
+            }
+        }
+    }
+    
+    // Try DNS lookup as a last resort (using a public DNS API)
+    try {
+        const dnsLookupUrl = `https://dns.google/resolve?name=${encodeURIComponent(new URL(url).hostname)}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(dnsLookupUrl, {
             signal: controller.signal
         });
         
         clearTimeout(timeoutId);
-        return { isAccessible: true, error: null };
-    } catch (error) {
-        // Check if it's a CORS error
-        if (error.message && error.message.includes('CORS')) {
-            return { 
-                isAccessible: false, 
-                error: 'CORS policy blocked access (site may still be accessible)'
-            };
-        }
         
-        // Check if it's a timeout error
-        if (error.name === 'AbortError') {
-            return { 
-                isAccessible: false, 
-                error: 'Request timed out'
-            };
+        if (response.ok) {
+            const data = await response.json();
+            if (data.Answer && data.Answer.length > 0) {
+                // If DNS resolves, the site might be accessible
+                const result = { 
+                    isAccessible: true, 
+                    error: null,
+                    proxyUsed: 'DNS lookup',
+                    note: 'Site might be accessible (DNS resolves)'
+                };
+                
+                // Cache the result
+                websiteCache.set(url, {
+                    result,
+                    timestamp: Date.now()
+                });
+                
+                return result;
+            }
         }
-        
-        return { 
-            isAccessible: false, 
-            error: error.message || 'Unknown error'
-        };
+    } catch (dnsError) {
+        // DNS lookup failed, continue to final error
     }
+    
+    // This should rarely be reached, but just in case
+    const finalResult = { 
+        isAccessible: false, 
+        error: 'All access methods failed',
+        failedProxies: corsProxies.map(p => p.name).join(', ')
+    };
+    
+    // Cache the negative result
+    websiteCache.set(url, {
+        result: finalResult,
+        timestamp: Date.now()
+    });
+    
+    return finalResult;
 }
+
 
 /**
  * Updates the UI for a website check result
@@ -206,8 +360,12 @@ async function checkWebsiteAccessibility(url) {
  * @param {string} url - The URL that was checked
  * @param {boolean} isAccessible - Whether the site is accessible
  * @param {string|null} error - Error message if not accessible
+ * @param {string|null} proxyUsed - Which CORS proxy was used successfully
+ * @param {string|null} failedProxies - List of proxies that failed
+ * @param {number|null} retryAttempt - Which retry attempt succeeded (if any)
+ * @param {string|null} note - Additional information about the result
  */
-function updateWebsiteStatus(url, isAccessible, error) {
+function updateWebsiteStatus(url, isAccessible, error, proxyUsed, failedProxies, retryAttempt, note) {
     const websiteItem = document.getElementById(`website-${url.replace(/[^a-zA-Z0-9]/g, '-')}`);
     if (!websiteItem) return;
     
@@ -219,6 +377,30 @@ function updateWebsiteStatus(url, isAccessible, error) {
     if (isAccessible) {
         websiteItem.classList.add('accessible');
         statusIcon.innerHTML = '<i class="fas fa-check"></i>';
+        
+        // Add proxy info if available
+        if (proxyUsed) {
+            const proxyInfo = document.createElement('span');
+            proxyInfo.className = 'proxy-info';
+            let proxyText = `via ${proxyUsed}`;
+            
+            // Add retry information if available
+            if (retryAttempt) {
+                proxyText += ` (retry #${retryAttempt})`;
+            }
+            
+            proxyInfo.textContent = proxyText;
+            websiteItem.appendChild(proxyInfo);
+        }
+        
+        // Add note if available
+        if (note) {
+            const noteElement = document.createElement('span');
+            noteElement.className = 'proxy-info';
+            noteElement.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            noteElement.textContent = note;
+            websiteItem.appendChild(noteElement);
+        }
     } else {
         websiteItem.classList.add('inaccessible');
         statusIcon.innerHTML = '<i class="fas fa-times"></i>';
@@ -229,6 +411,14 @@ function updateWebsiteStatus(url, isAccessible, error) {
             errorMsg.className = 'error-message';
             errorMsg.textContent = error;
             websiteItem.appendChild(errorMsg);
+        }
+        
+        // Add failed proxies info if available
+        if (failedProxies) {
+            const proxyInfo = document.createElement('span');
+            proxyInfo.className = 'failed-proxies';
+            proxyInfo.textContent = `Failed proxies: ${failedProxies}`;
+            websiteItem.appendChild(proxyInfo);
         }
     }
 }
@@ -276,6 +466,12 @@ async function checkAllWebsites() {
     summaryDiv.style.display = 'none';
     initializeResults();
     
+    // Show info about enhanced network redundancy
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'info-message';
+    infoDiv.innerHTML = '<i class="fas fa-info-circle"></i> Using enhanced network redundancy with multiple CORS proxies, retry mechanisms, caching, and DNS fallback. Results may vary based on network restrictions.';
+    progressContainer.appendChild(infoDiv);
+    
     const allWebsites = websites;
     let checkedCount = 0;
     let accessibleCount = 0;
@@ -302,7 +498,7 @@ async function checkAllWebsites() {
             }
             
             // Update UI
-            updateWebsiteStatus(url, result.isAccessible, result.error);
+            updateWebsiteStatus(url, result.isAccessible, result.error, result.proxyUsed, result.failedProxies, result.retryAttempt, result.note);
             updateProgress(checkedCount, allWebsites.length);
         }));
     }
