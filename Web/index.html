@@ -379,6 +379,82 @@
             box-shadow: none;
         }
 
+        .upload-container {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .upload-header {
+            margin-bottom: 1rem;
+        }
+
+        .upload-header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-input-container {
+            display: flex;
+            align-items: center;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        #csv-file {
+            display: none;
+        }
+
+        .file-input-label {
+            background-color: var(--primary-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        .file-input-label:hover {
+            background-color: var(--primary-light);
+        }
+
+        #file-name {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+        }
+
+        .csv-format-info {
+            background-color: var(--bg-darker);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-top: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .csv-format-info pre {
+            background-color: var(--bg-dark);
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            overflow-x: auto;
+            font-family: monospace;
+            color: var(--text-secondary);
+        }
+
+        .csv-format-info a {
+            color: var(--text-primary);
+            text-decoration: underline;
+        }
+
         footer {
             text-align: center;
             margin-top: 3rem;
@@ -432,6 +508,27 @@
     <div class="container">
         <div class="description card">
             <p>This tool checks if websites are accessible from your current network. It helps identify which sites might be blocked by your ISP, university, or organization's network.</p>
+        </div>
+
+        <div class="upload-container card">
+            <div class="upload-header">
+                <h3><i class="fas fa-file-upload"></i> Upload Custom Website List</h3>
+            </div>
+            <p>You can upload your own list of websites to check in CSV format.</p>
+            <div class="file-input-container">
+                <input type="file" id="csv-file" accept=".csv" />
+                <label for="csv-file" class="file-input-label">
+                    <i class="fas fa-file-csv"></i> Choose CSV File
+                </label>
+                <span id="file-name">No file selected</span>
+            </div>
+            <div class="csv-format-info">
+                <p><strong>CSV Format:</strong> One website URL per line. Example:</p>
+                <pre>https://www.example.com
+https://www.anothersite.com
+https://www.testsite.org</pre>
+                <p><a href="#" id="download-sample">Download Sample CSV</a></p>
+            </div>
         </div>
         
         <button id="start-btn">Start Checking <i class="fas fa-play-circle"></i></button>
