@@ -542,7 +542,7 @@ async function checkAllWebsites() {
 
 // Function to show the feedback overlay
 function showFeedbackOverlay() {
-    const overlay = document.getElementById('feedback-overlay');
+    const overlay = document.getElementById('feedback-content');
     overlay.style.display = 'block';
 }
 
@@ -785,4 +785,47 @@ function displayTimeoutError(allWebsites, checkedCount) {
 
     // Re-enable the start button
     startBtn.disabled = false;
+}
+
+
+
+function downloadReport() {
+    let reportContent = "URL,Result,Error,Method,Proxy Used\n";
+  
+    // Get all website items
+    const websiteItems = document.querySelectorAll('.website-item');
+  
+    websiteItems.forEach(item => {
+      const url = item.querySelector('span:not(.status-icon)').textContent;
+      const isAccessible = item.classList.contains('accessible');
+      const errorDiv = item.querySelector('.error-message');
+      const error = errorDiv ? errorDiv.textContent.replace(/,/g, ';') : ""; // Replace commas in error messages
+      let method = "";
+      let proxyUsed = "";
+  
+      // Extract method and proxy information from the note element
+      const noteElement = item.querySelector('.proxy-info');
+      if (noteElement) {
+        const noteText = noteElement.textContent;
+        const methodMatch = noteText.match(/Method: (.*?)(?: \(via (.*?)\))?(?: \(retry (\d+)\))?/);
+        if (methodMatch) {
+          method = methodMatch[1];
+          proxyUsed = methodMatch[2] || "";
+        }
+      }
+  
+      const row = `"${url}","${isAccessible ? "Accessible" : "Inaccessible"}","${error}","${method}","${proxyUsed}"\n`;
+      reportContent += row;
+    });
+  
+    // Create a Blob and download the file
+    const blob = new Blob([reportContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'report.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
