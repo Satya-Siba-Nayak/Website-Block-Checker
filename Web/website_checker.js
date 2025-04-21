@@ -506,6 +506,9 @@ async function checkAllWebsites() {
     showSummary(accessibleCount, inaccessibleCount);
     startBtn.disabled = false;
     statusText.textContent = 'Check completed!';
+
+    // Add feedback button after check is complete
+    resultsDiv.appendChild(createFeedbackButton());
 }
 
 /**
