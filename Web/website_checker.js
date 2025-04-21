@@ -178,7 +178,7 @@ async function checkWebsiteAccessibility(url) {
     try {
         const pingResult = await ping(hostname, 3); // 3-second timeout
         if (pingResult.alive) {
-            const result = { isAccessible: true, error: null, method: 'ping' };
+                const result = { isAccessible: true, error: null, method: 'ping'};
             websiteCache.set(url, { result, timestamp: Date.now() });
             return result;
         }
@@ -341,6 +341,9 @@ function updateWebsiteStatus(url, isAccessible, error, method, proxyUsed, failed
         websiteItem.classList.add('accessible');
         statusIcon.innerHTML = '<i class="fas fa-check"></i>';
 
+        let note = `Method: ${method}`;
+        if (proxyUsed) note += ` (via ${proxyUsed})`;
+        if (retryAttempt) note += ` (retry ${retryAttempt})`;
         if (method) {
             const noteElement = document.createElement('span');
             noteElement.className = 'proxy-info';
@@ -354,7 +357,7 @@ function updateWebsiteStatus(url, isAccessible, error, method, proxyUsed, failed
         
         // Add error message if available
         if (error) {
-            const errorMsg = document.createElement('span');
+            const errorMsg = document.createElement('div');
             errorMsg.className = 'error-message';
             errorMsg.textContent = error;
             websiteItem.appendChild(errorMsg);
@@ -476,6 +479,11 @@ async function checkAllWebsites() {
     let accessibleCount = 0;
     let inaccessibleCount = 0;
     
+    // Global timeout for the entire check (2 minutes)
+    const globalTimeout = setTimeout(() => {
+        displayTimeoutError(allWebsites, checkedCount);
+    }, 2 * 60 * 1000);
+
     // Update initial progress
     updateProgress(checkedCount, allWebsites.length);
     
@@ -499,7 +507,10 @@ async function checkAllWebsites() {
             // Update UI
             updateWebsiteStatus(url, result.isAccessible, result.error, result.method, result.proxyUsed, result.failedProxies, result.retryAttempt);
             updateProgress(checkedCount, allWebsites.length);
-        }));
+        })).catch(error => {
+             console.error("An unexpected error occurred during website check:", error);
+             // Handle the error as needed, e.g., show a message to the user
+        });
     }
     
     // Show summary and re-enable start button
@@ -507,7 +518,7 @@ async function checkAllWebsites() {
     startBtn.disabled = false;
 
     // Modify to include the icon
-    statusText.innerHTML = 'Check completed! <i id="feedback-icon" class="fas fa-question-circle"></i>';
+    statusText.innerHTML = 'Check completed! <i id="feedback-icon" class="fas fa-question-circle"></i> <div id="feedback-overlay" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #222222; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 1000;"><p style="color: #ffffff;">Results may vary due to network restrictions, or website configurations. If you encounter discrepancies, please let us know. </p><button id="close-feedback" style="margin-top: 10px; padding: 5px 10px; background-color: #333333; color: #ffffff; border: none; border-radius: 3px; cursor: pointer;">Close</button></div>';
 
     const feedbackIcon = document.getElementById('feedback-icon');
     feedbackIcon.addEventListener('click', showFeedbackOverlay);
@@ -521,6 +532,11 @@ async function checkAllWebsites() {
             hideFeedbackOverlay();
         }
     });
+
+    // Clear the global timeout if all websites are checked
+    if (checkedCount === allWebsites.length) {
+        clearTimeout(globalTimeout);
+    }
 
 }
 
@@ -757,3 +773,16 @@ csvFileInput.addEventListener('change', function() {
         fileNameDisplay.textContent = 'No file selected';
     }
 });
+
+function displayTimeoutError(allWebsites, checkedCount) {
+    const remainingWebsites = allWebsites.slice(checkedCount);
+    remainingWebsites.forEach(url => {
+        updateWebsiteStatus(url, false, "Check timed out", "timeout");
+    });
+
+    // Update the status text to indicate a timeout
+    statusText.textContent = "Check timed out. Some websites may not have been checked.";
+
+    // Re-enable the start button
+    startBtn.disabled = false;
+}
