@@ -159,23 +159,59 @@ function initializeResults() {
 const websiteCache = new Map();
 
 /**
- * Checks if a website is accessible using fetch API with multiple CORS proxies
- * Enhanced with retry mechanism, more proxies, and caching
- * 
- * @param {string} url - The URL of the website to check
- * @returns {Promise<{isAccessible: boolean, error: string|null}>} - Result object
+ * Checks website accessibility with improved ping, subdomain check, and CORS fallback.
+ *
+ * @param {string} url The URL to check.
+ * @returns {Promise<{isAccessible: boolean, error: string|null, method: string}>}
  */
 async function checkWebsiteAccessibility(url) {
     // Check cache first
     if (websiteCache.has(url)) {
         const cachedResult = websiteCache.get(url);
-        // Only use cache if it's not too old (5 minutes)
-        if (Date.now() - cachedResult.timestamp < 5 * 60 * 1000) {
-            return cachedResult.result;
+        if (Date.now() - cachedResult.timestamp < 5 * 60 * 1000) return cachedResult.result;
+    }
+
+    const hostname = new URL(url).hostname;
+    const subdomains = ["www", "m", "mobile", "api", "cdn", "static", "assets"];
+
+    // 1. Initial Ping Check
+    try {
+        const pingResult = await ping(hostname, 3); // 3-second timeout
+        if (pingResult.alive) {
+            const result = { isAccessible: true, error: null, method: 'ping' };
+            websiteCache.set(url, { result, timestamp: Date.now() });
+            return result;
+        }
+    } catch (pingError) {
+        console.error("Ping check failed:", pingError);
+    }
+
+    // 2. Subdomain Verification
+    for (const sub of subdomains) {
+        try {
+            const subdomainPingResult = await ping(`${sub}.${hostname}`, 3);
+            if (subdomainPingResult.alive) {
+                const result = { isAccessible: true, error: 'Main site unreachable, but subdomain OK.', method: `ping (${sub}.${hostname})` };
+                websiteCache.set(url, { result, timestamp: Date.now() });
+                return result;
+            }
+        } catch (subPingError) {
+            console.debug(`Subdomain ${sub}.${hostname} ping failed:`, subPingError); // Use debug for non-critical errors
         }
     }
 
-    // List of CORS proxies to try in order (expanded list for more redundancy)
+    // 3. Fallback to CORS Proxy Checks
+    return await checkWithProxies(url);
+}
+
+/**
+ * Checks website accessibility using CORS proxies.
+ *
+ * @param {string} url The URL to check.
+ * @returns {Promise<{isAccessible: boolean, error: string|null, proxyUsed?: string}>}
+ */
+async function checkWithProxies(url) {
+    // CORS Proxies (expanded list)
     const corsProxies = [
         { url: `https://corsproxy.io/?${encodeURIComponent(url)}`, name: 'corsproxy.io' },
         { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, name: 'allorigins.win' },
@@ -186,125 +222,89 @@ async function checkWebsiteAccessibility(url) {
         { url: `https://thingproxy.freeboard.io/fetch/${url}`, name: 'thingproxy.freeboard.io' },
         { url: `https://yacdn.org/proxy/${url}`, name: 'yacdn.org' }
     ];
-    
-    // Try direct access first (will likely fail due to CORS but worth trying)
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout for direct access
-        
-        const response = await fetch(url, {
-            method: 'HEAD',
-            mode: 'no-cors', // Try with no-cors mode
-            signal: controller.signal,
-            cache: 'no-store' // Bypass cache for fresh results
-        });
-        
-        clearTimeout(timeoutId);
-        // If we get here with no-cors, we can't actually tell if the site is accessible
-        // but we can assume it might be since the request didn't fail
-        const result = { isAccessible: true, error: null, proxyUsed: 'direct' };
-        
-        // Cache the result
-        websiteCache.set(url, {
-            result,
-            timestamp: Date.now()
-        });
-        
-        return result;
-    } catch (directError) {
-        // Direct access failed (expected), continue with proxies
-    }
-    
-    // Try each proxy with retry mechanism
+
+    // Loop through proxies with retries
     for (const proxy of corsProxies) {
-        // Try up to 3 times with exponential backoff
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
-                // Set a timeout for the fetch request
                 const controller = new AbortController();
-                // Increase timeout for each retry attempt
-                const timeout = 5000 + (attempt * 2000); // 5s, 7s, 9s
-                const timeoutId = setTimeout(() => controller.abort(), timeout);
-                
+                const timeout = 5000 + attempt * 2000; // Increase timeout on retries
+                setTimeout(() => controller.abort(), timeout);
+
                 const response = await fetch(proxy.url, {
-                    method: 'HEAD', // Only get headers, not the full response
-                    mode: 'cors',
+                    method: 'HEAD', // Only headers
+                    mode: 'cors', // Always use cors mode with proxies
                     signal: controller.signal,
-                    cache: 'no-store', // Bypass cache for fresh results
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 Website Block Checker'
-                    }
+                    cache: 'no-store', // No caching for fresh checks
+                    headers: { 'User-Agent': 'Mozilla/5.0 Website Block Checker' }
                 });
-                
-                clearTimeout(timeoutId);
-                
-                const result = { 
-                    isAccessible: true, 
-                    error: null,
-                    proxyUsed: proxy.name,
-                    retryAttempt: attempt > 0 ? attempt : null
+
+                clearTimeout(controller.signal.timeoutId);
+                const result = {
+                    isAccessible: true, error: null, proxyUsed: proxy.name, method: `proxy (${proxy.name})`, retryAttempt: attempt > 0 ? attempt : null
                 };
-                
-                // Cache the result
-                websiteCache.set(url, {
-                    result,
-                    timestamp: Date.now()
-                });
-                
+                websiteCache.set(url, { result, timestamp: Date.now() });
                 return result;
+
             } catch (error) {
-                // If it's not the last attempt, wait before retrying
                 if (attempt < 2) {
-                    // Exponential backoff: 1s, 2s
-                    const backoffTime = Math.pow(2, attempt) * 1000;
-                    await new Promise(resolve => setTimeout(resolve, backoffTime));
-                    continue; // Try again with this proxy
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000)); // Exponential backoff
+                    continue; // Retry
                 }
-                
-                // If this is the last proxy in the list and last attempt, return the error
                 if (proxy === corsProxies[corsProxies.length - 1]) {
                     let result;
-                    
-                    // Check if it's a CORS error
-                    if (error.message && error.message.includes('CORS')) {
-                        result = { 
-                            isAccessible: false, 
-                            error: 'CORS policy blocked access (site may still be accessible)',
-                            failedProxies: corsProxies.map(p => p.name).join(', ')
-                        };
+
+                    if (error.message && error.message.includes('CORS')) { // Cors Error
+                        result = { isAccessible: false, error: 'CORS blocked (site may be accessible)', method: 'proxy', failedProxies: corsProxies.map(p => p.name).join(', ') };
+                    } else if (error.name === 'AbortError') { // Timeout error
+                        result = { isAccessible: false, error: 'Proxy timeout', method: 'proxy', failedProxies: corsProxies.map(p => p.name).join(', ') };
+                    } else {
+                        result = { isAccessible: false, error: 'Proxies failed: ' + (error.message || 'Unknown error'), method: 'proxy', failedProxies: corsProxies.map(p => p.name).join(', ') };
                     }
-                    // Check if it's a timeout error
-                    else if (error.name === 'AbortError') {
-                        result = { 
-                            isAccessible: false, 
-                            error: 'Request timed out',
-                            failedProxies: corsProxies.map(p => p.name).join(', ')
-                        };
-                    }
-                    else {
-                        result = { 
-                            isAccessible: false, 
-                            error: 'All CORS proxies failed: ' + (error.message || 'Unknown error'),
-                            failedProxies: corsProxies.map(p => p.name).join(', ')
-                        };
-                    }
-                    
-                    // Cache the negative result (but with shorter expiry)
-                    websiteCache.set(url, {
-                        result,
-                        timestamp: Date.now()
-                    });
-                    
                     return result;
                 }
-                
-                // If not the last proxy, break the retry loop and continue to the next proxy
-                break;
+                break; // Move to the next proxy on failure
             }
         }
     }
-    
-    // Try DNS lookup as a last resort (using a public DNS API)
+
+    // All proxies failed (this should be reached rarely now)
+    const finalResult = { isAccessible: false, error: 'All proxies failed', method: 'proxy', failedProxies: corsProxies.map(p => p.name).join(', ') };
+    websiteCache.set(url, { result: finalResult, timestamp: Date.now() });
+    return finalResult;
+}
+
+
+/**
+ * Pings a host to check its reachability.
+ *
+ * @param {string} host The hostname to ping.
+ * @param {number} timeout Timeout in seconds.
+ * @returns {Promise<{alive: boolean, time?: number}>}
+ */
+function ping(host, timeout = 2) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+        const img = new Image();
+        img.onload = () => {
+            const endTime = Date.now();
+            resolve({ alive: true, time: endTime - startTime });
+        };
+        img.onerror = () => resolve({ alive: false });
+        img.src = `http://${host}/favicon.ico?t=${Date.now()}`; // Favicon often small and cached
+        setTimeout(() => {
+            resolve({ alive: false });
+        }, timeout * 1000);
+    });
+}
+
+/** @deprecated
+ * Checks website accessibility using a DNS lookup.
+ *
+ * @param {string} url The URL to check.
+ * @returns {Promise<{isAccessible: boolean, error: string|null, method: string}>}
+ */
+async function checkWithDNS(url) {
     try {
         const dnsLookupUrl = `https://dns.google/resolve?name=${encodeURIComponent(new URL(url).hostname)}`;
         const controller = new AbortController();
@@ -314,90 +314,34 @@ async function checkWebsiteAccessibility(url) {
             signal: controller.signal
         });
         
-        clearTimeout(timeoutId);
-        
+        clearTimeout(controller.signal.timeoutId);
         if (response.ok) {
             const data = await response.json();
             if (data.Answer && data.Answer.length > 0) {
-                // If DNS resolves, the site might be accessible
-                const result = { 
-                    isAccessible: true, 
-                    error: null,
-                    proxyUsed: 'DNS lookup',
-                    note: 'Site might be accessible (DNS resolves)'
-                };
-                
-                // Cache the result
-                websiteCache.set(url, {
-                    result,
-                    timestamp: Date.now()
-                });
-                
+                const result = { isAccessible: true, error: null, method: 'DNS lookup' };
+                websiteCache.set(url, { result, timestamp: Date.now() });
                 return result;
             }
         }
     } catch (dnsError) {
-        // DNS lookup failed, continue to final error
+        console.error("DNS lookup failed:", dnsError);
     }
-    
-    // This should rarely be reached, but just in case
-    const finalResult = { 
-        isAccessible: false, 
-        error: 'All access methods failed',
-        failedProxies: corsProxies.map(p => p.name).join(', ')
-    };
-    
-    // Cache the negative result
-    websiteCache.set(url, {
-        result: finalResult,
-        timestamp: Date.now()
-    });
-    
-    return finalResult;
+
+    return { isAccessible: false, error: 'DNS lookup failed', method: 'DNS lookup' };
 }
 
-
-/**
- * Updates the UI for a website check result
- * 
- * @param {string} url - The URL that was checked
- * @param {boolean} isAccessible - Whether the site is accessible
- * @param {string|null} error - Error message if not accessible
- * @param {string|null} proxyUsed - Which CORS proxy was used successfully
- * @param {string|null} failedProxies - List of proxies that failed
- * @param {number|null} retryAttempt - Which retry attempt succeeded (if any)
- * @param {string|null} note - Additional information about the result
- */
-function updateWebsiteStatus(url, isAccessible, error, proxyUsed, failedProxies, retryAttempt, note) {
+function updateWebsiteStatus(url, isAccessible, error, method, proxyUsed, failedProxies, retryAttempt) {
     const websiteItem = document.getElementById(`website-${url.replace(/[^a-zA-Z0-9]/g, '-')}`);
     if (!websiteItem) return;
-    
+
     const statusIcon = websiteItem.querySelector('.status-icon');
-    
-    // Remove pending class
     websiteItem.classList.remove('pending');
-    
+
     if (isAccessible) {
         websiteItem.classList.add('accessible');
         statusIcon.innerHTML = '<i class="fas fa-check"></i>';
-        
-        // Add proxy info if available
-        if (proxyUsed) {
-            const proxyInfo = document.createElement('span');
-            proxyInfo.className = 'proxy-info';
-            let proxyText = `via ${proxyUsed}`;
-            
-            // Add retry information if available
-            if (retryAttempt) {
-                proxyText += ` (retry #${retryAttempt})`;
-            }
-            
-            proxyInfo.textContent = proxyText;
-            websiteItem.appendChild(proxyInfo);
-        }
-        
-        // Add note if available
-        if (note) {
+
+        if (method) {
             const noteElement = document.createElement('span');
             noteElement.className = 'proxy-info';
             noteElement.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
@@ -406,7 +350,7 @@ function updateWebsiteStatus(url, isAccessible, error, proxyUsed, failedProxies,
         }
     } else {
         websiteItem.classList.add('inaccessible');
-        statusIcon.innerHTML = '<i class="fas fa-times"></i>';
+        statusIcon.innerHTML = '<i class="fas fa-times"></i>'; // Red X for blocked/failed
         
         // Add error message if available
         if (error) {
@@ -448,7 +392,7 @@ function showSummary(accessibleCount, inaccessibleCount) {
     summaryDiv.style.display = 'block';
     
     if (inaccessibleCount === 0) {
-        summaryDiv.innerHTML = '<i class="fas fa-check-circle" style="color: #FFFFFF; margin-right: 10px;"></i> All websites are accessible! <i class="fas fa-thumbs-up" style="margin-left: 5px;"></i>';
+        summaryDiv.innerHTML = '<i class="fas fa-check-circle" style="color: #FFFFFF; margin-right: 10px;"></i> All websites are accessible! <i class="fas fa-thumbs-up" style="margin-left: 5px;"></i>'; // Use success icon
         summaryDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
         summaryDiv.style.color = '#FFFFFF';
     } else {
@@ -553,7 +497,7 @@ async function checkAllWebsites() {
             }
             
             // Update UI
-            updateWebsiteStatus(url, result.isAccessible, result.error, result.proxyUsed, result.failedProxies, result.retryAttempt, result.note);
+            updateWebsiteStatus(url, result.isAccessible, result.error, result.method, result.proxyUsed, result.failedProxies, result.retryAttempt);
             updateProgress(checkedCount, allWebsites.length);
         }));
     }
