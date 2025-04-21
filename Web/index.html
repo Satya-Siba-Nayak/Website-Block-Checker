@@ -494,6 +494,29 @@
                 font-size: 2rem;
             }
         }
+
+        /* Overlay Styles */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* Translucent background */
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000; /* Ensure it's on top */
+        }
+
+        .feedback-content {
+            background-color: var(--bg-card);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+            position: relative; /* For close icon positioning */
+        }
+
     </style>
 </head>
 <body>
@@ -554,53 +577,24 @@ https://www.testsite.org</pre>
                 </button>
             </a>
         </div>
+
+        <!-- Feedback Overlay -->
+        <div id="feedback-overlay" class="overlay">
+            <div class="feedback-content">
+            </div>
+        </div>
     </div>
 
     <script src="website_checker.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const resultsDiv = document.getElementById('results');
-
-            const createFeedbackButton = () => {
-                const feedbackButton = document.createElement('button');
-                feedbackButton.textContent = "Results seem off? Found a bug?";
-                feedbackButton.style.cssText = `
-                    display: block;
-                    margin: 2rem auto;
-                    padding: 0.8rem 2rem;
-                    background-color: #333333; /* Match primary color */
-                    color: #FFFFFF;
-                    border: 1px solid #444444;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 0.95rem;
-                    font-weight: 700;
-                    transition: all 0.2s ease;
-                `;
-                feedbackButton.addEventListener('click', showFeedbackOptions);
-                return feedbackButton;
-            };
-
-            const showFeedbackOptions = () => {
-                resultsDiv.innerHTML = ''; // Clear previous results
-                const optionsDiv = document.createElement('div');
-                optionsDiv.style.textAlign = 'center';
-                optionsDiv.innerHTML = `
-                    <p>We appreciate your feedback!</p>
-                    <a href="https://github.com/Satya-Siba-Nayak/Website-Block-Checker" target="_blank" rel="noopener noreferrer" style="margin: 0 1rem;">
-                        <button style="padding: 0.5rem 1rem; background-color: #333333; color: #FFFFFF; border: none; border-radius: 4px; cursor: pointer;">Contribute to GitHub Repo</button>
-                    </a>
-                    <a href="https://github.com/Satya-Siba-Nayak/Website-Block-Checker/issues/new" target="_blank" rel="noopener noreferrer">
-                        <button style="padding: 0.5rem 1rem; background-color: #333333; color: #FFFFFF; border: none; border-radius: 4px; cursor: pointer;">Create an Issue on GitHub Repo</button>
-                    </a>
-                `;
-                resultsDiv.appendChild(optionsDiv);
-            };
-
-            // You'll need to call this function after the website check is complete and results are displayed.
-            // For example, in your website_checker.js, after displaying results, you'd do:
-            // resultsDiv.appendChild(createFeedbackButton());
-        });
-    </script>
+    <style>
+        .close-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+    </style>
 </body>
 </html>

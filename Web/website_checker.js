@@ -505,10 +505,35 @@ async function checkAllWebsites() {
     // Show summary and re-enable start button
     showSummary(accessibleCount, inaccessibleCount);
     startBtn.disabled = false;
-    statusText.textContent = 'Check completed!';
 
-    // Add feedback button after check is complete
-    resultsDiv.appendChild(createFeedbackButton());
+    // Modify to include the icon
+    statusText.innerHTML = 'Check completed! <i id="feedback-icon" class="fas fa-question-circle"></i>';
+
+    const feedbackIcon = document.getElementById('feedback-icon');
+    feedbackIcon.addEventListener('click', showFeedbackOverlay);
+
+    // Event listener for closing the overlay
+    document.getElementById('close-feedback').addEventListener('click', hideFeedbackOverlay);
+
+    // Event listener for Escape key to close the overlay
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape") {
+            hideFeedbackOverlay();
+        }
+    });
+
+}
+
+// Function to show the feedback overlay
+function showFeedbackOverlay() {
+    const overlay = document.getElementById('feedback-overlay');
+    overlay.style.display = 'block';
+}
+
+// Function to hide the feedback overlay
+function hideFeedbackOverlay() {
+    const overlay = document.getElementById('feedback-overlay');
+    overlay.style.display = 'none';
 }
 
 /**
